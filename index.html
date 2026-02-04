@@ -3,59 +3,318 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube 翻譯字幕播放器 (進階版)</title>
+    <title>YouTube 翻譯字幕播放器 (進階按鈕版)</title>
     <style>
-        body { font-family: "Microsoft JhengHei", Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
-        .config-section { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        label { font-weight: bold; display: block; margin-top: 10px; }
-        input, textarea, select { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f4f9; color: #333; }
+        .config-section { background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        label { font-weight: bold; display: block; margin-top: 12px; }
+        input, textarea { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; }
         
-        .setting-row { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
-        .setting-item { flex: 1; min-width: 150px; }
+        /* 設定列樣式 */
+        .setting-row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; margin-top: 10px; }
+        .setting-item { flex: 1; min-width: 200px; }
 
-        button { padding: 12px 24px; background: #ff0000; color: white; border: none; cursor: pointer; border-radius: 4px; font-size: 16px; width: 100%; transition: 0.3s; }
-        button:hover { background: #cc0000; }
+        /* Offset 按鈕樣式 */
+        .offset-ctrl { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+        .btn-small { width: 45px; height: 40px; background: #eee; border: 1px solid #ccc; cursor: pointer; border-radius: 4px; font-size: 18px; font-weight: bold; }
+        .btn-small:hover { background: #ddd; }
+        #time-offset { text-align: center; width: 70px; margin: 0; font-weight: bold; }
 
+        /* 主按鈕 */
+        .load-btn { padding: 15px; background: #ff0000; color: white; border: none; cursor: pointer; border-radius: 6px; font-size: 18px; width: 100%; margin-top: 20px; font-weight: bold; transition: 0.3s; }
+        .load-btn:hover { background: #cc0000; box-shadow: 0 4px 10px rgba(255,0,0,0.3); }
+
+        /* 影片容器 */
         .video-container {
             position: relative;
             width: 100%;
-            padding-top: 56.25%;
+            padding-top: 56.25%; /* 16:9 */
             background: #000;
-            margin-top: 20px;
-            border-radius: 8px;
+            margin-top: 25px;
+            border-radius: 12px;
             overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
         #player { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
+        /* 字幕壓條 */
         #subtitle-overlay {
             position: absolute;
             left: 50%;
-            bottom: 8%;
+            bottom: 10%;
             transform: translateX(-50%);
-            max-width: 90%;
+            max-width: 85%;
             text-align: center;
-            /* 預設樣式，會被 JS 動態覆蓋 */
-            font-size: 24px;
             color: #ffffff;
+            /* 預設陰影確保可讀性 */
             text-shadow: 2px 2px 4px rgba(0,0,0,0.9), -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
             padding: 5px 15px;
             pointer-events: none;
             z-index: 10;
             white-space: pre-wrap;
+            line-height: 1.4;
+            display: none; /* 沒字幕時隱藏 */
         }
     </style>
 </head>
 <body>
+
     <h1>YouTube 翻譯字幕播放器</h1>
     
     <div class="config-section">
         <label>YouTube 網址：</label>
-        <input type="text" id="youtube-url" placeholder="貼上網址，例如: https://www.youtube.com/watch?v=xxxx">
+        <input type="text" id="youtube-url" value="https://youtu.be/-b41lJ4qRl8?si=6xJzUM0u-nXQw21V">
         
         <label>字幕內容 (格式: (分:秒-分:秒)內容):</label>
-        <textarea id="subtitles" rows="6" placeholder="(00:01-00:03)嘿！你好！&#10;(00:04-00:06)這是一段自訂字幕"></textarea>
+        <textarea id="subtitles" rows="8">
+(00:00-00:02) 第一季成員：那眼神超殺的，那些穿格紋襯衫的傢伙。
+(00:03-00:05) 第一季成員：你們不是只有一件（團體服）嗎？
+(00:06-00:08) 第二季成員：不是啦！咦？什麼？要吵架嗎？
+(00:09-00:10) 第一季成員：別把事情鬧大喔。
+(00:11-00:13) 第二季成員：大家好！
+(00:14-00:16) 第一季成員：哇！好有真實感喔！
+(00:17-00:17) 第二季成員：唷吼！
+(00:18-00:19) 第一季成員：感覺人好多喔！
+(00:20-00:22) 第一季成員：竟然變成這種大陣仗了。
+(00:23-00:25) 第一季成員：泰憲（Taeheon）出現在這裡感覺好違和喔。
+(00:26-00:27) 第一季成員：你在幹嘛啦？泰憲在這裡真的太奇怪了。
+(00:28-00:32) 第二季成員：好厲害喔！
+(00:33-00:35) 第一季成員：我們在咖啡廳見過對吧？
+(00:35-00:36) 第二季成員：見過呢。
+(00:37-00:38) 第一季成員：真的很有新鮮感。
+(00:38-00:40) Alan：初次見面，我是 Alan。
+(00:41-00:43) Alan：然後這些是《情定大叔》第一季的成員。
+(00:44-00:49) 眾人：(鼓掌) 耶～！好厲害！
+(00:50-00:52) Alan：好開心喔，好久不見了。
+(00:52-00:55) Alan：我們其實認識很久了，是老朋友了。
+(00:56-00:57) 成員：好開心，我們是朋友。
+(00:58-01:00) 成員：然後在咖啡廳偶然遇到。
+(01:01-01:03) 成員：那時候就覺得很可疑。
+(01:03-01:04) Alan：對啊，那時候第六感很強。
+(01:05-01:06) Alan：因為你又不住在日本。
+(01:07-01:09) Alan：我想說：「誒？為什麼你們兩個會在一起？」
+(01:10-01:12) 第二季成員：那時候剛好跟 Izaya 在原宿的咖啡廳。
+(01:13-01:14) 第二季成員：我就說「誒？是 Alan 耶」，他也說「誒？是 Izaya 耶」。
+(01:15-01:17) Alan：那時候我們是那間咖啡廳裡最吵的。
+(01:18-01:21) 成員：感覺發生了很多奇蹟耶。
+(01:21-01:23) Alan：我看到第四季了喔。
+(01:24-01:25) 眾人：第四季？是第四集吧！
+(01:26-01:28) Alan：抱歉抱歉！
+(01:28-01:29) 成員：是集數跟季數搞混了。
+(01:29-01:31) 成員：有時候日文會退步。
+(01:31-01:33) Alan：是看到第四集，大家一起看。
+(01:35-01:38) 第一季成員：這裡能再次重逢真的很棒。
+(01:39-01:40) 第一季成員：對啊，嚇了一跳。
+(01:41-01:42) 第二季成員：Bomi 也是。
+(01:43-01:45) 第二季成員：不覺得很厲害嗎？
+(01:46-01:48) 成員：應該有很多想問的事吧？
+(01:49-01:50) 成員：我們這邊也很多想問的。
+(01:51-01:52) Alan：我們有點像對吧？
+(01:53-01:54) 成員：感覺頻率很近。
+(01:55-01:56) 第一季成員：他從剛剛就一直講個不停。
+(01:57-01:58) 第一季成員：我懂、我懂。
+(01:59-02:00) 第一季成員：只要有一點空隙他就會插話。
+(02:01-02:02) 第二季成員：很有幫助啦，很有幫助。
+(02:03-02:04) 成員：感覺像照鏡子一樣。
+(02:05-02:06) 成員：像照鏡子、照鏡子。
+(02:07-02:10) 成員：好榮幸喔。
+(02:11-02:12) 第一季成員：先從房子開始問吧？
+(02:12-02:14) 第二季成員：房子真的差很多。
+(02:15-02:16) 第二季成員：等級提升超多的。
+(02:17-02:20) Alan：我們反應最大的是房子的部分。
+(02:21-02:22) 第一季成員：感覺升級超多。
+(02:23-02:24) 第一季成員：房間裡有廁所對吧？
+(02:25-02:25) 第一季成員：還有淋浴間。
+(02:26-02:27) Alan：還有投幣式洗衣機……誒，有三台嗎？
+(02:28-02:30) 第二季成員：投幣式洗衣機？
+(02:31-02:32) 第二季成員：對我們來說那算投幣式洗衣機等級了。
+(02:35-02:36) Alan：對我們來說真的是投幣式洗衣房。
+(02:37-02:39) 第一季成員：我們那時候只有一台耶。
+(02:41-02:43) 第一季成員：竟然有這麼時髦的聊天場所。
+(02:44-02:45) 第一季成員：洗衣間談話（Laundry Talk）真的超讚的。
+(02:46-02:47) 第二季成員：Bomi 房間。
+(02:48-02:50) 第二季成員：隨時歡迎來玩。
+(02:51-02:52) 第一季成員：我們那時候是夏天。
+(02:55-02:57) 第一季成員：所以一走出門就是雪白的冬景。
+(03:00-03:01) Alan：很好耶。
+(03:02-03:04) 第一季成員：很冷吧？真的超級冷。
+(03:05-03:07) 第一季成員：那時候根本不是賣咖啡的時候。
+(03:08-03:10) 第二季成員：咖啡車（Coffee Truck）確實很難賣。
+(03:11-03:13) 第二季成員：所以咖啡車裡一直開著鍋爐。
+(03:14-03:15) 第一季成員：原來如此。
+(03:17-03:18) 第一季成員：零下幾度啊？
+(03:19-03:20) 第二季成員：聽說零下 12 度左右。
+(03:21-03:22) 第一季成員：那會想念夏天嗎？
+(03:23-03:24) 第二季成員：超想念的。
+(03:27-03:28) 第一季成員：但冬天的滑雪場也感覺很不錯。
+(03:29-03:31) 第二季成員：滑雪場超棒的，我看過影片了。
+(03:32-03:33) 第二季成員：不要丟下我一人啦。
+(03:34-03:36) 第二季成員：我也是，感覺感同身受。
+(03:39-03:41) 第二季成員：辛苦了，真的辛苦了。
+(03:43-03:46) 第一季成員：你們是看了第一季才參加第二季的吧？
+(03:46-03:50) 第一季成員：會緊張嗎？還是反而不緊張？
+(03:51-03:54) 第二季成員：前三天左右最緊張，之後就習慣了。
+(03:56-04:01) 第二季成員：多虧了第一季，大概知道整體的流程。
+(04:02-04:04) 第一季成員：但緊張的點可能不太一樣。
+(04:05-04:07) 第二季成員：看節目跟實際在那裡的緊張感完全不同。
+(04:08-04:12) 第二季成員：翻牌（抉擇）的時候手都在抖，根本停不下來。
+(04:16-04:20) 第二季成員：一邊抖一邊……根本停不下來。
+(04:22-04:25) 第一季成員：如果咖啡車沒辦法兩個人獨處，就沒時間說話了對吧？
+(04:27-04:28) 第一季成員：確實在冬天沒辦法馬上跑到室外。
+(04:34-04:36) 第二季成員：雖然有做雪屋（Kamakura），在雪屋裡有兩個人相處的時間。
+(04:39-04:41) 第一季成員：辛苦了。
+(04:42-04:44) 第一季成員：我有幫你加油喔，真的。
+(04:46-04:46) 第二季成員：謝謝。
+(04:47-04:50) 第一季成員：最初的兩週最難熬，要習慣環境。
+(04:53-04:54) 第一季成員：你多久才習慣？
+(04:54-04:55) 第二季成員：兩天。
+(04:55-04:57) 眾人：太快了吧！
+(04:58-05:03) 第一季成員：這個人完全沒有迷惘，不管是戀愛還是開車。
+(05:04-05:06) 第一季成員：所以泰憲覺得跟他住在一起的印象是這樣。
+(05:07-05:09) 第一季成員：對，Izaya 很直接。
+(05:10-05:11) 第一季成員：從小就是這樣。
+(05:12-05:14) 第二季成員：真的嗎？好害羞。
+(05:15-05:20) 第二季成員：雖然看了第一季很感動，因為喜歡這節目才參加。
+(05:22-05:25) 第二季成員：覺得「一定會變得很棒吧」，有一種安心感。
+(05:26-05:31) 第二季成員：所以一開始就全力以赴，大家都很認真投入戀愛。
+(05:33-05:36) Alan：聽你這麼說，再看第二季感覺會很不一樣。
+(05:37-05:38) Alan：謝謝。
+(05:39-05:40) 第一季成員：你是那種會主動出擊的類型對吧？
+(05:41-05:42) 第二季成員：對啊，連我自己都嚇一跳。
+(05:44-05:45) 第一季成員：還有 3D 列印機大活躍。
+(05:47-05:50) 第二季成員：沒想到會被吐槽成那樣。
+(05:51-05:53) 第一季成員：把那個帶去真的很厲害耶。
+(05:54-05:56) 第二季成員：因為那是我的日常。
+(05:58-05:59) 第一季成員：旅行時會帶嗎？
+(06:00-06:03) 第二季成員：旅行時就不會帶了啦，家裡有。
+(06:07-06:10) 第一季成員：我們都有各自的支持對象（推し）對吧？
+(06:11-06:13) 第一季成員：泰憲的支持者好像很多。
+(06:14-06:16) 第一季成員：沒聽到自己的名字感覺有點寂寞。
+(06:22-06:24) 泰憲：好尷尬。
+(06:25-06:27) 第一季成員：大家的支持對象現在能說嗎？
+(06:28-06:29) 第二季成員：我是泰憲。
+(06:31-06:32) 泰憲：謝謝。
+(06:33-06:36) 第二季成員：在第二季不是超受歡迎嗎？
+(06:37-06:42) 第二季成員：大家都在喊泰憲、泰憲，感覺就像是被呼喚來的一樣。
+(06:43-06:46) 第一季成員：那幕我還沒看，好想看喔。
+(06:47-06:48) 泰憲：好尷尬。
+(06:49-06:50) 第一季成員：Ryuki 呢？
+(06:51-06:52) Ryuki：Dai 跟 Shun。
+(06:54-06:55) 第一季成員：喔～是支持 CP 喔。
+(06:57-06:59) Ryuki：看的時候真的大哭了。
+(07:02-07:03) 第一季成員：Kazu 呢？
+(07:04-07:05) Kazu：我的話……
+(07:06-07:08) 第一季成員：你說是 Yusaku，剛剛才說 Alan。
+(07:11-07:12) Alan：等等，是劈腿嗎？（笑）
+(07:13-07:15) 第一季成員：我記得是說 Alan 耶。
+(07:18-07:22) Kazu：我是覺得 Alan 跟 Yusaku 這種比較有男人味的類型我比較喜歡。
+(07:24-07:25) Alan：好開心喔。
+(07:26-07:29) Alan：雖然我內心其實很像辣妹（ギャル）就是了。
+(07:30-07:31) 第二季成員：我呢？
+(07:32-07:34) 第二季成員：是 Gensei。那個「腳碰不到地」真的太犯規了。
+(07:36-07:39) Gensei：那個位置我可是不會讓人的喔。
+(07:44-07:45) Gensei：那位置不想讓給別人，謝謝喔。
+(07:47-07:49) 第一季成員：我很喜歡沒什麼城府的性格，所以我支持 Yusaku。
+(07:54-07:57) Yusaku：真的沒有啦，謝謝。
+(08:03-08:05) 第二季成員：以性吸引力來看的話是泰憲。
+(08:06-08:08) 第二季成員：但想當朋友的話是 Alan。
+(08:10-08:12) 第二季成員：但令人在意的又是 Gensei。
+(08:14-08:15) Gensei：謝謝。
+(08:16-08:19) Alan：走吧走吧，去吃飯。
+(08:21-08:26) 第二季成員：我在影片裡也有說，是泰憲跟 Shun。
+(08:30-08:32) 第二季成員：感覺很難以預測。
+(08:33-08:34) 第二季成員：抱歉，請幫忙翻譯一下。
+(08:35-08:37) 第一季成員：就是行動超乎預期（Unexpected）。
+(08:41-08:43) 第一季成員：看的時候覺得最有趣，有一種「誒？」的驚喜。
+(08:46-08:50) Alan：我以前交往的對象完全不會煮飯，所以看第一季覺得 Kazu 太棒了。
+(08:55-08:56) Kazu：謝謝。
+(09:00-09:02) Alan：我懂、我懂。
+(09:04-09:05) 第二季成員：我也有兩位支持對象。
+(09:06-09:07) 第二季成員：一位是泰憲。
+(09:08-09:10) 第二季成員：另一位是……抱歉又是你，Gensei。
+(09:14-09:16) 第二季成員：「腳碰不到地」真的很棒。
+(09:18-09:21) 第二季成員：是在說我嗎？那真的會讓人害羞呢。
+(09:23-09:26) 第二季成員：接下來換那邊支持這邊對吧？我們說完了。
+(09:27-09:29) Alan：那我們來一圈吧。
+(09:30-09:34) 第二季成員：誒～好像沒有支持的。
+(09:35-09:39) 第二季成員：說沒有支持的才是標準答案吧。
+(09:44-09:46) 第二季成員：沒有嗎？
+(09:47-09:49) 第一季成員：有一種說法叫「箱推」（全員支持）。
+(09:49-09:51) 第一季成員：就是大家都很好的意思。
+(09:53-09:54) 第二季成員：我是箱推，謝謝大家。
+(09:57-10:01) 第一季成員：雖然是箱推，但如果是我的話……是 Job。
+(10:02-10:06) 眾人：喔喔喔～！
+(10:07-10:11) 第一季成員：待會再私聊，又在用那種眼神了。
+(10:12-10:15) 第一季成員：從友情的角度來看，看到第四集為止。
+(10:16-10:20) 第一季成員：Bomi 那種重視朋友的感覺很棒。
+(10:21-01:22) 第一季成員：我有在聽喔，在洗衣間的時候。
+(10:23-10:25) 第一季成員：叫什麼來著？Bomi 房間。
+(10:28-10:32) 第二季成員：什麼時候變成這名字的？
+(10:33-10:38) 第一季成員：我的話……想看泰憲談戀愛的樣子。
+(10:39-10:41) 第一季成員：被跟我們不同類型的男生圍繞著。
+(10:44-10:50) 第一季成員：泰憲會站在什麼樣的位置生活呢？我真的很好奇。
+(10:52-10:54) 第一季成員：很期待喔，泰憲。謝謝。
+(10:55-10:56) 泰憲先生好可愛。
+(10:57-10:59) 我有兩個人選，第一個是 JOUBU。
+(10:59-11:00) JOUBU くん。
+(11:00-11:01) 喔喔！
+(11:01-11:05) 欸，反應不一樣耶？我的反應不一樣嗎？反應差太多了吧。
+(11:05-11:07) 不是啦，我剛才是在細細品味。
+(11:07-11:08) 原來是這種路線啊。
+(11:08-11:11) 覺得他很合得來，是非常棒的一個人。
+(11:12-11:14) 很快就能變得很親近。不論跟誰。
+(11:15-11:17) 還有，因為是朋友，我也很推 Bomi。
+(11:18-11:19) 喔，原來如此。
+(11:20-11:24) 雖然年紀小，但應對進退非常有大人的成熟感，我覺得很厲害。
+(11:24-11:25) 沒這回事啦。
+(11:25-11:27) 我支持你喔。謝謝。
+(11:28-11:32) 讓我變得很想為他加油的是 Bomi... 不對，講錯了。
+(11:32-11:36) 講錯了啦！居然講錯。
+(11:37-11:39) 雖然很想支持他...
+(11:39-11:41) JOUBU，對不起。
+(11:41-11:43) 對不起，總覺得事情都有照著預期發展。
+(11:44-11:46) 哪有照著預期啊？完全沒有。
+(11:47-11:49) 到第四集為止沒有一件事是順利的。
+(11:49-11:51) 就是因為這樣才叫你要加油。
+(11:51-11:53) 請繼續支持他。
+(11:54-11:56) 講錯了啦，我們是不一樣的，可能沒有傳達到 JOUBU 那裡。
+(11:57-12:00) 有一點、有一點啦。沒啦，完全沒有，謝謝。
+(12:04-12:06) 讓人很在意呢。我懂。
+(12:06-12:12) 除了很在意之外，感覺他像是揉合了各種性格的我。
+(12:13-12:15) 例如，跟和幸先生年齡相近。
+(12:15-12:17) 很近嗎？很近喔。
+(12:17-12:19) 我今年 37 歲。
+(12:19-12:21) 哇！完全看不出來！太誇張了。
+(12:22-12:25) 所以我會去觀察年齡相仿的人的舉止。
+(12:25-12:29) 到第四集為止他還沒什麼表現，所以很期待之後的發展。
+(12:30-12:31) 敬請期待。
+(12:31-12:32) 真的希望他能加油。謝謝。
+(12:33-12:36) 雖然我沒資格說別人，但我很懂，超級懂。
+(12:37-12:42) 果然，JOUBU 跟他很像呢，看著看著就能感覺到那種氛圍。
+(12:43-12:47) 真的，會變得很想見到他。
+(12:48-12:51) 確實，所以我一直很期待什麼時候能見到。
+(12:52-12:55) 還有，因為我本來就認識他們。
+(12:56-13:00) 威廉和伊薩以前的故事對我來說也很新鮮。
+(13:02-13:08) 在《男朋友》這個 9 人、10 人的世界裡，會發生很多事情嘛。
+(13:10-13:14) 會發生一些平時生活中不會發生的事。
+(13:15-13:17) 像是情感上的波動之類的。
+(13:18-13:26) 在那種美好又特別的地方，所展開的情感交流，我看了之後覺得很興奮。
+(13:26-13:28) 會想為他們加油。
+(13:29-13:32) 我推的 CP（情侶組合），雖然不知道算不算 CP。
+(13:34-13:36) 看到第四集，我推他們。
+(13:37-13:38) 謝謝。
+        </textarea>
 
         <div class="setting-row">
+            <div class="setting-item">
+                <label>時間微調 (Offset 秒)：</label>
+                <div class="offset-ctrl">
+                    <button class="btn-small" onclick="adjustOffset(-0.5)">-</button>
+                    <input type="number" id="time-offset" value="0" step="0.1">
+                    <button class="btn-small" onclick="adjustOffset(0.5)">+</button>
+                </div>
+                <small style="color: #888; display: block; margin-top: 5px;">點擊直接生效，無需重載</small>
+            </div>
             <div class="setting-item">
                 <label>文字顏色：</label>
                 <input type="color" id="font-color" value="#ffffff">
@@ -64,13 +323,9 @@
                 <label>字體大小：<span id="size-val">24</span>px</label>
                 <input type="range" id="font-size" min="16" max="60" value="24">
             </div>
-            <div class="setting-item">
-                <label>時間調整 (秒)：</label>
-                <input type="number" id="time-offset" value="0" step="0.1" placeholder="正數延後，負數提前">
-            </div>
         </div>
         
-        <button onclick="loadVideo()">載入影片與字幕</button>
+        <button class="load-btn" onclick="loadVideo()">載入影片與字幕</button>
     </div>
 
     <div class="video-container">
@@ -83,12 +338,13 @@
         let subtitles = [];
         let subtitleInterval;
 
-        // 即時預覽樣式調整
         const overlay = document.getElementById('subtitle-overlay');
         const sizeSlider = document.getElementById('font-size');
         const colorPicker = document.getElementById('font-color');
         const sizeValText = document.getElementById('size-val');
+        const offsetInput = document.getElementById('time-offset');
 
+        // 即時監聽：樣式調整
         sizeSlider.addEventListener('input', () => {
             overlay.style.fontSize = sizeSlider.value + 'px';
             sizeValText.textContent = sizeSlider.value;
@@ -97,6 +353,18 @@
         colorPicker.addEventListener('input', () => {
             overlay.style.color = colorPicker.value;
         });
+
+        // Offset 按鈕控制函式
+        function adjustOffset(amount) {
+            let currentValue = parseFloat(offsetInput.value) || 0;
+            offsetInput.value = (currentValue + amount).toFixed(1);
+            
+            // 只要字幕欄位有內容，就重新解析（讓時間即時生效）
+            const subsText = document.getElementById('subtitles').value;
+            if (subsText) {
+                parseSubtitles(subsText);
+            }
+        }
 
         function loadYouTubeAPI() {
             if (window.YT) return;
@@ -111,12 +379,14 @@
             return (match && match[2].length === 11) ? match[2] : null;
         }
 
+        // 解析字幕
         function parseSubtitles(text) {
             subtitles = [];
-            const offset = parseFloat(document.getElementById('time-offset').value) || 0;
+            const offset = parseFloat(offsetInput.value) || 0;
             const lines = text.trim().split('\n');
             
             lines.forEach(line => {
+                // 支援括號開頭的時間格式 (mm:ss-mm:ss)
                 const match = line.match(/\((\d+):(\d+)-(\d+):(\d+)\)\s*(.*)/);
                 if (match) {
                     const start = (parseInt(match[1]) * 60 + parseInt(match[2])) + offset;
@@ -126,6 +396,7 @@
             });
         }
 
+        // 定時更新字幕
         function updateSubtitles() {
             if (!player || typeof player.getCurrentTime !== 'function') return;
             const currentTime = player.getCurrentTime();
@@ -138,7 +409,6 @@
                 }
             }
             overlay.textContent = activeSubtitle;
-            // 如果沒字幕就隱藏背景感，有的話顯示
             overlay.style.display = activeSubtitle ? 'block' : 'none';
         }
 
@@ -146,11 +416,12 @@
             loadYouTubeAPI();
             const url = document.getElementById('youtube-url').value;
             const videoId = getVideoId(url);
-            if (!videoId) return alert('請輸入正確的 YouTube 網址');
+            if (!videoId) return alert('請確認網址是否正確！');
 
+            // 初始化解析
             parseSubtitles(document.getElementById('subtitles').value);
             
-            // 初始化樣式
+            // 設定樣式
             overlay.style.fontSize = sizeSlider.value + 'px';
             overlay.style.color = colorPicker.value;
 
@@ -158,9 +429,13 @@
 
             player = new YT.Player('player', {
                 videoId: videoId,
-                playerVars: { 'playsinline': 1, 'controls': 1 },
+                playerVars: { 
+                    'playsinline': 1, 
+                    'controls': 1,
+                    'modestbranding': 1 
+                },
                 events: {
-                    'onReady': (e) => {
+                    'onReady': () => {
                         if (subtitleInterval) clearInterval(subtitleInterval);
                         subtitleInterval = setInterval(updateSubtitles, 100);
                     },
